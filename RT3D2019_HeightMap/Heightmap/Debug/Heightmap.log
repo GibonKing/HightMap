@@ -1,0 +1,3 @@
+﻿  Heightmap.cpp
+c:\users\b6011054\desktop\rt3d2019_heightmap\heightmap\heightmap.cpp(206): warning C4389: '!=': signed/unsigned mismatch
+  Heightmap.vcxproj -> C:\Users\b6011054\Desktop\RT3D2019_HeightMap\Debug\Heightmap.exe
