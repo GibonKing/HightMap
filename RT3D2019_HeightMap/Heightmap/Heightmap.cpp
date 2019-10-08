@@ -62,17 +62,49 @@ bool HeightMapApplication::HandleStart()
 
 	int vertex(0);
 
-	for (int gridSqreZ(0); gridSqreZ < m_HeightMapLength; gridSqreZ++) {
-		for (int gridSqrX(0); gridSqrX < m_HeightMapWidth; gridSqrX++) {
+	for (int gridSqreZ(0); gridSqreZ < m_HeightMapLength -1; gridSqreZ++) {
+		for (int gridSqrX(0); gridSqrX < m_HeightMapWidth -1; gridSqrX++) {
 
 			int mapIndex = (gridSqreZ * m_HeightMapWidth) + gridSqrX;
 
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 00.0f, m_pHeightMap[mapIndex].y,						 gridSqreZ + 00.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 00.0f, m_pHeightMap[mapIndex + m_HeightMapWidth].y,	 gridSqreZ + 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 10.0f, m_pHeightMap[mapIndex + 1].y,					 gridSqreZ + 00.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 10.0f, m_pHeightMap[mapIndex + 1].y,					 gridSqreZ + 00.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 00.0f, m_pHeightMap[mapIndex + m_HeightMapWidth].y,	 gridSqreZ + 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(gridSqrX + 10.0f, m_pHeightMap[mapIndex + m_HeightMapWidth + 1].y, gridSqreZ + 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
+			//Vertices
+			XMFLOAT3 V0 = m_pHeightMap[mapIndex];
+			XMFLOAT3 V1 = m_pHeightMap[mapIndex + m_HeightMapWidth];
+			XMFLOAT3 V2 = m_pHeightMap[mapIndex + 1];
+			XMFLOAT3 V3 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];
+
+			//Vectors between points
+			XMFLOAT3 V0V1 = XMFLOAT3((V1.x - V0.x), (V1.y - V0.y), (V1.z - V0.z));
+			XMFLOAT3 V0V2 = XMFLOAT3((V2.x - V0.x), (V2.y - V0.y), (V2.z - V0.z));
+
+			XMFLOAT3 V3V2 = XMFLOAT3((V2.x - V3.x), (V2.y - V3.y), (V2.z - V3.z));
+			XMFLOAT3 V3V1 = XMFLOAT3((V1.x - V3.x), (V1.y - V3.y), (V1.z - V3.z));
+
+			//Pointers
+			XMFLOAT3* P1(&V0V1);
+			XMFLOAT3* P2(&V0V2);
+
+			XMFLOAT3* P3(&V3V2);
+			XMFLOAT3* P4(&V3V1);
+
+			//Normal Vectors
+			XMVECTOR N1V = XMVector3Cross(XMLoadFloat3(P1), XMLoadFloat3(P2));
+
+			XMVECTOR N2V = XMVector3Cross(XMLoadFloat3(P3), XMLoadFloat3(P4));
+
+			//Normal Floats
+			XMFLOAT3 N1F;
+			XMStoreFloat3(&N1F, N1V);
+
+			XMFLOAT3 N2F;
+			XMStoreFloat3(&N2F, N2V);
+
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N2F);
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N2F);
+			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, N2F);
 		}
 	}
 	// Side 5 - Top face
