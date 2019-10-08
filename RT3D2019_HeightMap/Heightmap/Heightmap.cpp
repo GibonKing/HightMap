@@ -57,27 +57,41 @@ bool HeightMapApplication::HandleStart()
 	// Clearly this code will need changing to render the heightmap
 	/////////////////////////////////////////////////////////////////
 
-	m_HeightMapVtxCount = m_HeightMapWidth * m_HeightMapLength * 6;
+	m_HeightMapVtxCount =  (m_HeightMapLength - 1) * m_HeightMapWidth * 2;
 	m_pMapVtxs = new Vertex_Pos3fColour4ubNormal3f[m_HeightMapVtxCount];
 
 	int vertex(0);
+	int width = m_HeightMapWidth - 1;
+	int height = m_HeightMapLength - 1;
+	bool Even;
+	int useGridSqrX;
+	int mapIndex;
 
-	for (int gridSqreZ(0); gridSqreZ < m_HeightMapLength -1; gridSqreZ++) {
-		for (int gridSqrX(0); gridSqrX < m_HeightMapWidth -1; gridSqrX++) {
+	for (int gridSqreZ(0); gridSqreZ < height; gridSqreZ++) {
+		for (int gridSqrX(0); gridSqrX < width; gridSqrX++) {
 
-			int mapIndex = (gridSqreZ * m_HeightMapWidth) + gridSqrX;
+			if ((gridSqreZ % 2) == 0) {
+				Even = true;
+				useGridSqrX = gridSqrX;
+			}
+			else {
+				Even = false;
+				useGridSqrX = (width - 1) - gridSqrX;
+			}
+
+			mapIndex = (gridSqreZ * m_HeightMapWidth) + useGridSqrX;
 
 			//Vertices
-			XMFLOAT3 V0 = m_pHeightMap[mapIndex];
-			XMFLOAT3 V1 = m_pHeightMap[mapIndex + m_HeightMapWidth];
-			XMFLOAT3 V2 = m_pHeightMap[mapIndex + 1];
-			XMFLOAT3 V3 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];
+			XMFLOAT3 V0 = m_pHeightMap[mapIndex + m_HeightMapWidth]; //BottomLeft
+			XMFLOAT3 V1 = m_pHeightMap[mapIndex]; //TopLeft
+			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1]; //BottomRight
+			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1]; //TopRight
 
 			//Vectors between points
-			XMVECTOR V0V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V0);
+			XMVECTOR V0V1 = XMLoadFloat3(&V0) - XMLoadFloat3(&V1);
 			XMVECTOR V0V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V0);
-			XMVECTOR V3V2 = XMLoadFloat3(&V3) - XMLoadFloat3(&V2);
-			XMVECTOR V3V1 = XMLoadFloat3(&V3) - XMLoadFloat3(&V1);
+			XMVECTOR V3V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V3);
+			XMVECTOR V3V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V3);
 
 			//Normal Vectors
 			XMVECTOR N1V = XMVector3Cross(V0V1, V0V2);
@@ -90,12 +104,24 @@ bool HeightMapApplication::HandleStart()
 			XMStoreFloat3(&N2F, N2V);
 
 			//Put plots into array
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N2F);
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N2F);
-			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, N2F);
+			if (Even) {
+				if (useGridSqrX == 0) {
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
+				}
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, N1F);
+				if (useGridSqrX == width) {
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
+				}
+			}
+			else {
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
+				if (useGridSqrX == 0) {
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
+				}
+			}
 		}
 	}
 
@@ -105,7 +131,7 @@ bool HeightMapApplication::HandleStart()
 
 	m_pHeightMapBuffer = CreateImmutableVertexBuffer(m_pD3DDevice, sizeof Vertex_Pos3fColour4ubNormal3f * m_HeightMapVtxCount, m_pMapVtxs);
 
-	delete m_pMapVtxs;
+ 	delete m_pMapVtxs;
 
 	return true;
 }
@@ -161,7 +187,7 @@ void HeightMapApplication::HandleRender()
 
 	this->Clear(XMFLOAT4(.2f, .2f, .6f, 1.f));
 
-	this->DrawUntexturedLit(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, m_pHeightMapBuffer, NULL, m_HeightMapVtxCount);
+	this->DrawUntexturedLit(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, m_pHeightMapBuffer, NULL, m_HeightMapVtxCount);
 }
 
 //////////////////////////////////////////////////////////////////////
