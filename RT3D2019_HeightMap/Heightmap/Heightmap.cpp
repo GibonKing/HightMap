@@ -74,31 +74,22 @@ bool HeightMapApplication::HandleStart()
 			XMFLOAT3 V3 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];
 
 			//Vectors between points
-			XMFLOAT3 V0V1 = XMFLOAT3((V1.x - V0.x), (V1.y - V0.y), (V1.z - V0.z));
-			XMFLOAT3 V0V2 = XMFLOAT3((V2.x - V0.x), (V2.y - V0.y), (V2.z - V0.z));
-
-			XMFLOAT3 V3V2 = XMFLOAT3((V2.x - V3.x), (V2.y - V3.y), (V2.z - V3.z));
-			XMFLOAT3 V3V1 = XMFLOAT3((V1.x - V3.x), (V1.y - V3.y), (V1.z - V3.z));
-
-			//Pointers
-			XMFLOAT3* P1(&V0V1);
-			XMFLOAT3* P2(&V0V2);
-
-			XMFLOAT3* P3(&V3V2);
-			XMFLOAT3* P4(&V3V1);
+			XMVECTOR V0V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V0);
+			XMVECTOR V0V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V0);
+			XMVECTOR V3V2 = XMLoadFloat3(&V3) - XMLoadFloat3(&V2);
+			XMVECTOR V3V1 = XMLoadFloat3(&V3) - XMLoadFloat3(&V1);
 
 			//Normal Vectors
-			XMVECTOR N1V = XMVector3Cross(XMLoadFloat3(P1), XMLoadFloat3(P2));
-
-			XMVECTOR N2V = XMVector3Cross(XMLoadFloat3(P3), XMLoadFloat3(P4));
+			XMVECTOR N1V = XMVector3Cross(V0V1, V0V2);
+			XMVECTOR N2V = XMVector3Cross(V3V2, V3V1);
 
 			//Normal Floats
 			XMFLOAT3 N1F;
 			XMStoreFloat3(&N1F, N1V);
-
 			XMFLOAT3 N2F;
 			XMStoreFloat3(&N2F, N2V);
 
+			//Put plots into array
 			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
 			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
 			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
@@ -107,13 +98,6 @@ bool HeightMapApplication::HandleStart()
 			m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, N2F);
 		}
 	}
-	// Side 5 - Top face
-	//m_pMapVtxs[24] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(0.0f, 10.0f, 0.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-	//m_pMapVtxs[25] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(0.0f, 10.0f, 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-	//m_pMapVtxs[26] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(10.0f, 10.0f, 0.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-	//m_pMapVtxs[27] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(10.0f, 10.0f, 0.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-	//m_pMapVtxs[28] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(0.0f, 10.0f, 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
-	//m_pMapVtxs[29] = Vertex_Pos3fColour4ubNormal3f(XMFLOAT3(10.0f, 10.0f, 10.0f), MAP_COLOUR, XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 	/////////////////////////////////////////////////////////////////
 	// Down to here
