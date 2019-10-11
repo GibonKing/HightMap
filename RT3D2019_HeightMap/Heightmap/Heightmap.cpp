@@ -57,72 +57,92 @@ bool HeightMapApplication::HandleStart()
 	// Clearly this code will need changing to render the heightmap
 	/////////////////////////////////////////////////////////////////
 
-	m_HeightMapVtxCount =  (m_HeightMapLength - 1) * m_HeightMapWidth * 2;
+	m_HeightMapVtxCount =  m_HeightMapLength * m_HeightMapWidth * 2;
 	m_pMapVtxs = new Vertex_Pos3fColour4ubNormal3f[m_HeightMapVtxCount];
 
 	int vertex(0);
+	int normal(0);
 	int width = m_HeightMapWidth - 1;
 	int height = m_HeightMapLength - 1;
-	bool Even;
+	bool Even = true;
 	int useGridSqrX;
 	int mapIndex;
+	int test = 0;
+	std::vector<XMFLOAT3> normals(width * height * 3);
+
 
 	for (int gridSqreZ(0); gridSqreZ < height; gridSqreZ++) {
+		test++;
 		for (int gridSqrX(0); gridSqrX < width; gridSqrX++) {
 
-			if ((gridSqreZ % 2) == 0) {
-				Even = true;
+			if (Even)
 				useGridSqrX = gridSqrX;
-			}
-			else {
-				Even = false;
+			else
 				useGridSqrX = (width - 1) - gridSqrX;
-			}
 
 			mapIndex = (gridSqreZ * m_HeightMapWidth) + useGridSqrX;
 
 			//Vertices
-			XMFLOAT3 V0 = m_pHeightMap[mapIndex + m_HeightMapWidth]; //BottomLeft
-			XMFLOAT3 V1 = m_pHeightMap[mapIndex]; //TopLeft
-			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1]; //BottomRight
-			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1]; //TopRight
+			XMFLOAT3 V1 = m_pHeightMap[mapIndex];							//TopLeft
+			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];	//BottomRight
+			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1];						//TopRight
 
 			//Vectors between points
-			XMVECTOR V0V1 = XMLoadFloat3(&V0) - XMLoadFloat3(&V1);
-			XMVECTOR V0V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V0);
 			XMVECTOR V3V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V3);
 			XMVECTOR V3V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V3);
 
 			//Normal Vectors
-			XMVECTOR N1V = XMVector3Cross(V0V1, V0V2);
-			XMVECTOR N2V = XMVector3Cross(V3V2, V3V1);
+			XMVECTOR N1V = XMVector3Cross(-V3V2, V3V1);
 
 			//Normal Floats
 			XMFLOAT3 N1F;
 			XMStoreFloat3(&N1F, N1V);
-			XMFLOAT3 N2F;
-			XMStoreFloat3(&N2F, N2V);
+
+			//Add to normals array
+			normals[mapIndex] = N1F;
+		}
+		Even = !Even;
+	}
+
+	normal = 0;
+
+	for (int gridSqreZ(0); gridSqreZ < height; gridSqreZ++) {
+		for (int gridSqrX(0); gridSqrX < width; gridSqrX++) {
+
+			if (Even)
+				useGridSqrX = gridSqrX;
+			else
+				useGridSqrX = (width - 1) - gridSqrX;
+
+			mapIndex = (gridSqreZ * m_HeightMapWidth) + useGridSqrX;
+
+			//Vertices
+			XMFLOAT3 V0 = m_pHeightMap[mapIndex + m_HeightMapWidth];		//BottomLeft
+			XMFLOAT3 V1 = m_pHeightMap[mapIndex];							//TopLeft
+			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];	//BottomRight
+			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1];						//TopRight
 
 			//Put plots into array
 			if (Even) {
 				if (useGridSqrX == 0) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, normals[mapIndex + m_HeightMapWidth]);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, normals[mapIndex]);
 				}
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, N1F);
-				if (useGridSqrX == width) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, normals[mapIndex]);
+				if (useGridSqrX == width - 1) {
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
 				}
 			}
 			else {
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, N1F);
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, N1F);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, normals[mapIndex]);
 				if (useGridSqrX == 0) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, N1F);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, normals[mapIndex + m_HeightMapWidth]);
 				}
 			}
 		}
+		Even = !Even;
 	}
 
 	/////////////////////////////////////////////////////////////////
