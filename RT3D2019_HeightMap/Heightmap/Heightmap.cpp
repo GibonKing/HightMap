@@ -67,12 +67,13 @@ bool HeightMapApplication::HandleStart()
 	bool Even = true;
 	int useGridSqrX;
 	int mapIndex;
-	int test = 0;
-	std::vector<XMFLOAT3> normals(width * height * 3);
+	int normalCount = width * height * 3;
+	std::vector<XMFLOAT3> topNormals(normalCount);
+	std::vector<XMFLOAT3> botNormals(normalCount);
+	XMFLOAT3 zero(0.0f, 0.0f, 0.0f);
 
 
 	for (int gridSqreZ(0); gridSqreZ < height; gridSqreZ++) {
-		test++;
 		for (int gridSqrX(0); gridSqrX < width; gridSqrX++) {
 
 			if (Even)
@@ -83,23 +84,30 @@ bool HeightMapApplication::HandleStart()
 			mapIndex = (gridSqreZ * m_HeightMapWidth) + useGridSqrX;
 
 			//Vertices
+			XMFLOAT3 V0 = m_pHeightMap[mapIndex + m_HeightMapWidth];		//BottomLeft
 			XMFLOAT3 V1 = m_pHeightMap[mapIndex];							//TopLeft
 			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];	//BottomRight
 			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1];						//TopRight
 
 			//Vectors between points
-			XMVECTOR V3V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V3);
+			XMVECTOR V0V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V0);
+			XMVECTOR V0V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V0);
 			XMVECTOR V3V1 = XMLoadFloat3(&V1) - XMLoadFloat3(&V3);
+			XMVECTOR V3V2 = XMLoadFloat3(&V2) - XMLoadFloat3(&V3);
 
 			//Normal Vectors
-			XMVECTOR N1V = XMVector3Cross(-V3V2, V3V1);
+			XMVECTOR TNV = XMVector3Cross(V3V1, V3V2);
+			XMVECTOR BNV = XMVector3Cross(-V0V1, V0V2);
 
 			//Normal Floats
-			XMFLOAT3 N1F;
-			XMStoreFloat3(&N1F, N1V);
+			XMFLOAT3 TNF;
+			XMStoreFloat3(&TNF, TNV);
+			XMFLOAT3 BNF;
+			XMStoreFloat3(&BNF, BNV);
 
 			//Add to normals array
-			normals[mapIndex] = N1F;
+			topNormals[mapIndex] = TNF;
+			botNormals[mapIndex] = BNF;
 		}
 		Even = !Even;
 	}
@@ -122,23 +130,71 @@ bool HeightMapApplication::HandleStart()
 			XMFLOAT3 V2 = m_pHeightMap[mapIndex + m_HeightMapWidth + 1];	//BottomRight
 			XMFLOAT3 V3 = m_pHeightMap[mapIndex + 1];						//TopRight
 
+			//Check Array Values
+			int topLeft		= (mapIndex - m_HeightMapWidth - 1)	>= 0 ? (mapIndex - m_HeightMapWidth - 1)	< normalCount ? (mapIndex - m_HeightMapWidth - 1)	: -1 : -1;
+			int top			= (mapIndex - m_HeightMapWidth)		>= 0 ? (mapIndex - m_HeightMapWidth)		< normalCount ? (mapIndex - m_HeightMapWidth)		: -1 : -1;
+			int topRight	= (mapIndex - m_HeightMapWidth + 1) >= 0 ? (mapIndex - m_HeightMapWidth + 1)	< normalCount ? (mapIndex - m_HeightMapWidth + 1)	: -1 : -1;
+			int left		= (mapIndex - 1)					>= 0 ? (mapIndex - 1)						< normalCount ? (mapIndex - 1)						: -1 : -1;
+			int centre		= (mapIndex)						>= 0 ? (mapIndex)							< normalCount ? (mapIndex)							: -1 : -1;
+			int right		= (mapIndex + 1)					>= 0 ? (mapIndex + 1)						< normalCount ? (mapIndex + 1)						: -1 : -1;
+			int botLeft		= (mapIndex + m_HeightMapWidth - 1) >= 0 ? (mapIndex + m_HeightMapWidth - 1)	< normalCount ? (mapIndex + m_HeightMapWidth - 1)	: -1 : -1;
+			int bot			= (mapIndex + m_HeightMapWidth)		>= 0 ? (mapIndex + m_HeightMapWidth)		< normalCount ? (mapIndex + m_HeightMapWidth)		: -1 : -1;
+			int botRight	= (mapIndex + m_HeightMapWidth + 1) >= 0 ? (mapIndex + m_HeightMapWidth + 1)	< normalCount ? (mapIndex + m_HeightMapWidth + 1)	: -1 : -1;
+
+			//Average Normals
+			XMVECTOR avgV0V = ( //Bottom Left
+				(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[left]) + XMLoadFloat3(&topNormals[left]))) +
+				(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]))) +
+				(botLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[botLeft]))) +
+				(bot == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[bot]) + XMLoadFloat3(&topNormals[bot])))
+				) / 6;
+			XMFLOAT3 avgV0;
+			XMStoreFloat3(&avgV0, avgV0V);
+
+			XMVECTOR avgV1V = ( //Top Left
+				(topLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[topLeft]) + XMLoadFloat3(&topNormals[topLeft]))) +
+				(top == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[top]))) +
+				(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[left]))) +
+				(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]) + XMLoadFloat3(&topNormals[centre])))
+				) / 6;
+			XMFLOAT3 avgV1;
+			XMStoreFloat3(&avgV1, avgV1V);
+
+			XMVECTOR avgV2V = ( //Bottom Right
+				(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]) + XMLoadFloat3(&topNormals[centre]))) +
+				(right == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[right]))) +
+				(bot == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[bot]))) +
+				(botRight == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[botRight]) + XMLoadFloat3(&topNormals[botRight])))
+				) / 6;
+			XMFLOAT3 avgV2;
+			XMStoreFloat3(&avgV2, avgV2V);
+
+			XMVECTOR avgV3V = ( //Top Right
+				(top == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[top]) + XMLoadFloat3(&topNormals[top]))) +
+				(topRight == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[topRight]))) +
+				(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[centre]))) +
+				(right == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[right]) + XMLoadFloat3(&topNormals[right])))
+				) / 6;
+			XMFLOAT3 avgV3;
+			XMStoreFloat3(&avgV3, avgV3V);
+
 			//Put plots into array
 			if (Even) {
 				if (useGridSqrX == 0) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, normals[mapIndex + m_HeightMapWidth]);
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, normals[mapIndex]);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, avgV0);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, avgV1);
 				}
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, normals[mapIndex]);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, avgV2);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V3, MAP_COLOUR, avgV3);
 				if (useGridSqrX == width - 1) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, avgV2);
 				}
 			}
 			else {
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, normals[mapIndex]);
-				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, normals[mapIndex]);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V2, MAP_COLOUR, avgV2);
+				m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V1, MAP_COLOUR, avgV1);
 				if (useGridSqrX == 0) {
-					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, normals[mapIndex + m_HeightMapWidth]);
+					m_pMapVtxs[vertex++] = Vertex_Pos3fColour4ubNormal3f(V0, MAP_COLOUR, avgV0);
 				}
 			}
 		}
