@@ -1,3 +1,3 @@
 ﻿  Heightmap.cpp
-c:\users\dave\onedrive\documents\david\university\course\third year\rt3d\week2\hightmap\rt3d2019_heightmap\heightmap\heightmap.cpp(324): warning C4389: '!=': signed/unsigned mismatch
+c:\users\dave\onedrive\documents\david\university\course\third year\rt3d\week2\hightmap\rt3d2019_heightmap\heightmap\heightmap.cpp(377): warning C4389: '!=': signed/unsigned mismatch
   Heightmap.vcxproj -> C:\Users\Dave\OneDrive\Documents\David\University\Course\Third Year\RT3D\Week2\HightMap\RT3D2019_HeightMap\Debug\Heightmap.exe
