@@ -31,6 +31,7 @@ class HeightMapApplication : public CommonApp
 	XMFLOAT3* m_pHeightMap;
 	Vertex_Pos3fColour4ubNormal3f* m_pMapVtxs;
 	float m_cameraZ;
+	XMVECTOR getAvgNormal(const std::vector<XMFLOAT3>&, const std::vector<XMFLOAT3>&, int, int, int, int);
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -70,7 +71,6 @@ bool HeightMapApplication::HandleStart()
 	int normalCount = width * height * 3;
 	std::vector<XMFLOAT3> topNormals(normalCount);
 	std::vector<XMFLOAT3> botNormals(normalCount);
-	XMFLOAT3 zero(0.0f, 0.0f, 0.0f);
 
 	int topLeft;
 	int top;
@@ -170,44 +170,24 @@ bool HeightMapApplication::HandleStart()
 			bot		 = miBot		>= 0 ? miBot		< normalCount ? miBot		: -1 : -1;
 			botRight = miBotRight	>= 0 ? miBotRight	< normalCount ? miBotRight	: -1 : -1;
 			
-			XMVECTOR avgV2V = ( //Average Normal Bottom Right
-				(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]) + XMLoadFloat3(&topNormals[centre]))) +
-				(right == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[right]))) +
-				(bot == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[bot]))) +
-				(botRight == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[botRight]) + XMLoadFloat3(&topNormals[botRight])))
-				) / 6;
+			XMVECTOR avgV2V = getAvgNormal(botNormals, topNormals, centre, right, bot, botRight); //Average Normal for Bottom Right
 			XMFLOAT3 avgV2;
 			XMStoreFloat3(&avgV2, avgV2V);
 
 			//Put plots into array
 			if (Even) {
 
-				XMVECTOR avgV3V = ( //Average Normal Top Right
-					(top == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[top]) + XMLoadFloat3(&topNormals[top]))) +
-					(topRight == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[topRight]))) +
-					(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[centre]))) +
-					(right == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[right]) + XMLoadFloat3(&topNormals[right])))
-					) / 6;
+				XMVECTOR avgV3V = getAvgNormal(botNormals, topNormals, top, topRight, centre, right); //Average Normal for Top Right
 				XMFLOAT3 avgV3;
 				XMStoreFloat3(&avgV3, avgV3V);
 
 				if (useGridSqrX == 0) {
 
-					XMVECTOR avgV0V = ( //Average Normal Bottom Left
-						(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[left]) + XMLoadFloat3(&topNormals[left]))) +
-						(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]))) +
-						(botLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[botLeft]))) +
-						(bot == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[bot]) + XMLoadFloat3(&topNormals[bot])))
-						) / 6;
+					XMVECTOR avgV0V = getAvgNormal(botNormals, topNormals, left, centre, botLeft, bot); //Average Normal for Bottom Left
 					XMFLOAT3 avgV0;
 					XMStoreFloat3(&avgV0, avgV0V);
 
-					XMVECTOR avgV1V = ( //Average Normal Top Left
-						(topLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[topLeft]) + XMLoadFloat3(&topNormals[topLeft]))) +
-						(top == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[top]))) +
-						(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[left]))) +
-						(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]) + XMLoadFloat3(&topNormals[centre])))
-						) / 6;
+					XMVECTOR avgV1V = getAvgNormal(botNormals, topNormals, topLeft, top, left, centre); //Average Normal for Top Left
 					XMFLOAT3 avgV1;
 					XMStoreFloat3(&avgV1, avgV1V);
 
@@ -224,12 +204,7 @@ bool HeightMapApplication::HandleStart()
 			}
 			else {
 
-				XMVECTOR avgV1V = ( //Average Normal Top Left
-					(topLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[topLeft]) + XMLoadFloat3(&topNormals[topLeft]))) +
-					(top == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[top]))) +
-					(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[left]))) +
-					(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]) + XMLoadFloat3(&topNormals[centre])))
-					) / 6;
+				XMVECTOR avgV1V = getAvgNormal(botNormals, topNormals, topLeft, top, left, centre); //Average Normal for Top Left
 				XMFLOAT3 avgV1;
 				XMStoreFloat3(&avgV1, avgV1V);
 
@@ -238,12 +213,7 @@ bool HeightMapApplication::HandleStart()
 
 				if (useGridSqrX == 0) {
 
-					XMVECTOR avgV0V = ( //Average Normal Bottom Left
-						(left == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[left]) + XMLoadFloat3(&topNormals[left]))) +
-						(centre == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[centre]))) +
-						(botLeft == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[botLeft]))) +
-						(bot == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[bot]) + XMLoadFloat3(&topNormals[bot])))
-						) / 6;
+					XMVECTOR avgV0V = getAvgNormal(botNormals, topNormals, left, centre, botLeft, bot); //Average Normal for Bottom Left
 					XMFLOAT3 avgV0;
 					XMStoreFloat3(&avgV0, avgV0V);
 
@@ -263,6 +233,19 @@ bool HeightMapApplication::HandleStart()
  	delete m_pMapVtxs;
 
 	return true;
+}
+
+XMVECTOR HeightMapApplication::getAvgNormal(const std::vector<XMFLOAT3>& topNormals, const std::vector<XMFLOAT3>& botNormals, int sqr1, int sqr2, int sqr3, int sqr4) {
+	XMFLOAT3 zero(0.0f, 0.0f, 0.0f);
+
+	XMVECTOR avgNormal = (
+		(sqr1 == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[sqr1]) + XMLoadFloat3(&topNormals[sqr1]))) +
+		(sqr2 == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[sqr2]))) +
+		(sqr3 == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&topNormals[sqr3]))) +
+		(sqr4 == -1 ? XMVECTOR(XMLoadFloat3(&zero)) : XMVECTOR(XMLoadFloat3(&botNormals[sqr4]) + XMLoadFloat3(&topNormals[sqr4])))
+		) / 6;	
+
+	return avgNormal;
 }
 
 //////////////////////////////////////////////////////////////////////
